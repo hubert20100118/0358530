@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>阿布食堂 · 订餐小程序</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 顶部栏 -->
+  <div class="topbar">
+    <span style="font-size:24px">🍱</span>
+    <div>
+      <h1 id="shopName">阿布食堂</h1>
+      <div class="sub" id="userLine">未登录</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <button class="btn ghost sm" id="loginBtn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.5)">登录</button>
+      <button class="btn ghost sm" id="logoutBtn" style="display:none;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.5)">退出</button>
+    </div>
+  </div>
+
+  <!-- 点餐 -->
+  <section class="view active" id="view-menu">
+    <div class="cat-bar" id="catBar"></div>
+    <div class="card" id="dishList"></div>
+  </section>
+
+  <!-- 我的 -->
+  <section class="view" id="view-my">
+    <div class="card" id="myProfile"></div>
+    <h3 style="margin:6px 4px">我的订单</h3>
+    <div id="myOrders"></div>
+  </section>
+
+  <!-- 后台 -->
+  <section class="view" id="view-admin">
+    <div id="adminLogin" class="card">
+      <h3>🔐 管理后台登录</h3>
+      <div class="field"><label>后台密码</label><input type="password" id="adminPwd" placeholder="默认 admin123" /></div>
+      <button class="btn" id="adminLoginBtn">进入后台</button>
+      <p class="muted" style="margin-top:10px">默认密码 admin123，可在「设置」中修改。</p>
+    </div>
+    <div id="adminPanel" style="display:none">
+      <div class="stat-grid" style="margin-bottom:12px">
+        <div class="stat"><div class="num" id="stOrders">0</div><div class="lbl">总订单</div></div>
+        <div class="stat"><div class="num" id="stRevenue">¥0</div><div class="lbl">总营收</div></div>
+        <div class="stat"><div class="num" id="stPending">0</div><div class="lbl">待处理</div></div>
+        <div class="stat"><div class="num" id="stUsers">0</div><div class="lbl">注册用户</div></div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="align-items:center">
+          <h3 style="margin:0;flex:1">📊 菜品销量 TOP</h3>
+        </div>
+        <div id="dishRank"></div>
+      </div>
+
+      <div class="card">
+        <h3>⏰ 时段分布</h3>
+        <div id="slotRank"></div>
+      </div>
+
+      <div class="card admin-only">
+        <div class="row" style="align-items:center">
+          <h3 style="margin:0;flex:1">🍽️ 菜单管理</h3>
+          <button class="btn sm" id="addDishBtn">+ 新增</button>
+        </div>
+        <div id="dishManage"></div>
+      </div>
+
+      <div class="card admin-only">
+        <div class="row" style="align-items:center">
+          <h3 style="margin:0;flex:1">👥 白名单 / 用户</h3>
+          <button class="btn sm" id="addWlBtn">+ 加白名单</button>
+        </div>
+        <div id="wlList"></div>
+        <h3 style="margin-top:14px">已注册用户</h3>
+        <div id="userList"></div>
+      </div>
+
+      <div class="card admin-only">
+        <div class="row" style="align-items:center">
+          <h3 style="margin:0;flex:1">🧾 全部订单</h3>
+          <button class="btn sm ghost" id="exportBtn">导出CSV</button>
+        </div>
+        <div id="allOrders"></div>
+      </div>
+
+      <div class="card admin-only">
+        <h3>⚙️ 设置</h3>
+        <div class="field"><label>店铺名称</label><input id="setShop" /></div>
+        <div class="field"><label>后台密码（留空不修改）</label><input id="setPwd" type="password" placeholder="新密码" /></div>
+        <div class="field"><label>取餐时段（逗号分隔）</label><input id="setSlots" /></div>
+        <button class="btn" id="saveSettings">保存设置</button>
+        <button class="btn ghost" id="resetBtn" style="margin-top:10px;color:var(--red);border-color:var(--red)">清空全部数据（重置）</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 购物车浮条 -->
+  <div class="cartbar" id="cartbar">
+    <div>
+      <div class="total" id="cartTotal">¥0</div>
+      <div style="font-size:11px;opacity:.8" id="cartCount">0 件</div>
+    </div>
+    <button class="go" id="goOrder">去结算 →</button>
+  </div>
+
+  <!-- 底部导航 -->
+  <nav class="tabbar">
+    <button data-view="menu" class="active"><span class="ico">🍱</span>点餐</button>
+    <button data-view="my"><span class="ico">👤</span>我的</button>
+    <button data-view="admin"><span class="ico">🔧</span>后台</button>
+  </nav>
+
+  <!-- 结算弹层 -->
+  <div class="modal-mask" id="orderMask">
+    <div class="modal">
+      <h3>确认订单</h3>
+      <div id="orderSummary"></div>
+      <div class="field" style="margin-top:12px"><label>取餐日期</label><input type="date" id="orderDate" /></div>
+      <div class="field"><label>取餐时段</label><div class="slots" id="orderSlots"></div></div>
+      <div class="field"><label>备注</label><input id="orderNote" placeholder="如：不要香菜" /></div>
+      <button class="btn" id="submitOrder">提交订单</button>
+      <button class="btn ghost" id="cancelOrder" style="margin-top:10px">取消</button>
+    </div>
+  </div>
+
+  <!-- 注册/登录弹层 -->
+  <div class="modal-mask" id="authMask">
+    <div class="modal">
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn sm" id="tabLogin" style="flex:1;background:var(--primary);color:#fff">登录</button>
+        <button class="btn sm ghost" id="tabReg" style="flex:1">注册</button>
+      </div>
+      <div id="loginForm">
+        <div class="field"><label>手机号</label><input id="lPhone" placeholder="白名单手机号" /></div>
+        <div class="field"><label>密码</label><input id="lPwd" type="password" placeholder="密码" /></div>
+        <button class="btn" id="doLogin">登录</button>
+        <p class="muted" style="margin-top:10px">没有账号？点击下方切换到「注册」，仅白名单手机号可注册。</p>
+      </div>
+      <div id="regForm" style="display:none">
+        <div class="field"><label>姓名</label><input id="rName" placeholder="你的称呼" /></div>
+        <div class="field"><label>手机号（须为白名单）</label><input id="rPhone" placeholder="如 13800000001" /></div>
+        <div class="field"><label>密码</label><input id="rPwd" type="password" placeholder="设置密码" /></div>
+        <button class="btn" id="doReg">注册并登录</button>
+        <p class="muted" style="margin-top:10px">演示白名单：13800000001 / 13800000002 / 13800000003</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通用新增/编辑弹层 -->
+  <div class="modal-mask" id="editMask">
+    <div class="modal" id="editBody"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

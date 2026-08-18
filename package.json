@@ -1,0 +1,12 @@
+{
+  "name": "meal-reservation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "订餐小程序：Web 前端 + Node 后端(node:sqlite)，同端口同源托管，跨设备共享",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

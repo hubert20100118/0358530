@@ -1,0 +1,10 @@
+/* pages/my/my.wxss */
+.profile { display: flex; align-items: center; justify-content: space-between; }
+.pname { font-size: 34rpx; font-weight: 700; }
+.hd { font-size: 28rpx; font-weight: 700; margin: 10rpx 30rpx; }
+.order .o-hd { display: flex; justify-content: space-between; align-items: center; }
+.o-date { font-weight: 600; }
+.o-items { font-size: 24rpx; color: #8a8a8a; margin: 12rpx 0; }
+.o-ft { display: flex; justify-content: space-between; align-items: center; margin-top: 8rpx; }
+.amt { color: #ff6b35; font-weight: 700; font-size: 30rpx; }
+.danger { color: #e23b3b; border: 1rpx solid #e23b3b; }

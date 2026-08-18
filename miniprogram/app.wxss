@@ -1,0 +1,21 @@
+/* 全局样式 */
+page {
+  background: #fff7f2;
+  color: #2b2b2b;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+}
+.card { background: #fff; border-radius: 20rpx; padding: 24rpx; margin: 20rpx; box-shadow: 0 6rpx 20rpx rgba(255,107,53,.12); }
+.primary { background: #ff6b35; color: #fff; }
+.muted { color: #8a8a8a; font-size: 24rpx; }
+.empty { text-align: center; color: #8a8a8a; padding: 60rpx 0; }
+.btn { background: #ff6b35; color: #fff; border-radius: 16rpx; padding: 22rpx; text-align: center; font-weight: 700; }
+.btn.ghost { background: #fff; color: #ff6b35; border: 1rpx solid #ff6b35; }
+.btn.sm { display: inline-block; padding: 10rpx 24rpx; font-size: 24rpx; border-radius: 12rpx; }
+.danger { color: #e23b3b; }
+.tag { font-size: 22rpx; padding: 4rpx 14rpx; border-radius: 16rpx; }
+.tag.pending { background: #fff3e0; color: #e2521c; }
+.tag.done { background: #e6f7ee; color: #18a558; }
+.tag.cancelled { background: #f0f0f0; color: #8a8a8a; }
+.pill { display: inline-block; font-size: 20rpx; padding: 2rpx 14rpx; border-radius: 14rpx; background: #eef; color: #557; }
+.pill.used { background: #eee; color: #999; }

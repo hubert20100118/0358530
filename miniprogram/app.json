@@ -1,0 +1,27 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/my/my",
+    "pages/admin/admin",
+    "pages/register/register"
+  ],
+  "window": {
+    "navigationBarTitleText": "阿布食堂",
+    "navigationBarBackgroundColor": "#ff6b35",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#fff7f2"
+  },
+  "tabBar": {
+    "color": "#8a8a8a",
+    "selectedColor": "#ff6b35",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "点餐" },
+      { "pagePath": "pages/my/my", "text": "我的" },
+      { "pagePath": "pages/admin/admin", "text": "后台" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

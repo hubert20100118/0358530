@@ -1,0 +1,8 @@
+/* pages/register/register.wxss */
+.wrap { padding: 30rpx; }
+.tabs { display: flex; gap: 20rpx; margin-bottom: 24rpx; }
+.tab { flex: 1; text-align: center; padding: 22rpx; border-radius: 16rpx; background: #fff; color: #8a8a8a; border: 1rpx solid #f0e6df; font-weight: 600; }
+.tab.active { background: #ff6b35; color: #fff; border-color: #ff6b35; }
+.field { margin-bottom: 22rpx; }
+.lbl { font-size: 24rpx; color: #8a8a8a; display: block; margin-bottom: 10rpx; }
+.inp { background: #f6f1ee; padding: 22rpx; border-radius: 14rpx; }

@@ -1,0 +1,55 @@
+<!-- pages/index/index.wxml -->
+<view class="top">
+  <view class="title">{{shopName}}</view>
+  <view class="sub">{{user ? '你好，' + user.name : '未登录 · 仅白名单可注册'}}</view>
+  <view wx:if="{{!user}}" class="login-link" bindtap="goRegister">去登录 / 注册 ›</view>
+</view>
+
+<scroll-view class="cats" scroll-x="true">
+  <view wx:for="{{cats}}" wx:key="*this" class="cat {{item === activeCat ? 'active' : ''}}" data-cat="{{item}}" bindtap="selectCat">{{item}}</view>
+</scroll-view>
+
+<view class="card" wx:if="{{dishes.length}}">
+  <view class="dish {{item.available ? '' : 'off'}}" wx:for="{{dishes}}" wx:key="id">
+    <view class="media"><image wx:if="{{item.image}}" class="media-img" src="{{item.image}}" mode="aspectFill" /><text wx:else>{{item.emoji || '🍽️'}}</text></view>
+    <view class="info">
+      <view class="name">{{item.name}} <text wx:if="{{!item.available}}" class="pill">售罄</text></view>
+      <view class="desc">{{item.desc}}</view>
+      <view class="price">¥{{item.price}}</view>
+    </view>
+    <view class="step">
+      <view class="btn-q" data-act="dec" data-id="{{item.id}}" bindtap="changeQty">−</view>
+      <text class="qty">{{cart[item.id] || 0}}</text>
+      <view class="btn-q {{item.available ? 'on' : 'dis'}}" data-act="inc" data-id="{{item.id}}" bindtap="changeQty">+</view>
+    </view>
+  </view>
+</view>
+<view wx:else class="empty">该分类暂无菜品</view>
+
+<!-- 购物车浮条 -->
+<view class="cartbar" wx:if="{{cartCount > 0}}">
+  <view>
+    <text class="total">¥{{cartTotal}}</text>
+    <text class="cnt">{{cartCount}} 件</text>
+  </view>
+  <view class="go" bindtap="goOrder">去结算 ›</view>
+</view>
+
+<!-- 下单弹层 -->
+<view class="mask" wx:if="{{showOrder}}" bindtap="closeOrder">
+  <view class="sheet" catchtap="noop">
+    <view class="sheet-h">确认订单</view>
+    <view class="field"><text class="lbl">取餐日期</text></view>
+    <picker mode="date" value="{{selDate}}" start="{{dates[0]}}" end="{{dates[dates.length-1]}}" bindchange="onDateChange">
+      <view class="picker">{{selDate}}</view>
+    </picker>
+    <view class="field"><text class="lbl">取餐时段</text></view>
+    <view class="slots">
+      <view wx:for="{{slots}}" wx:key="*this" class="slot {{item === selSlot ? 'active' : ''}}" data-slot="{{item}}" bindtap="onSlotTap">{{item}}</view>
+    </view>
+    <view class="field"><text class="lbl">备注</text></view>
+    <input class="inp" placeholder="如：不要香菜" value="{{note}}" bindinput="onNote" />
+    <view class="btn" bindtap="submitOrder">提交订单</view>
+    <view class="btn ghost" style="margin-top:16rpx" bindtap="closeOrder">取消</view>
+  </view>
+</view>

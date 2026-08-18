@@ -1,0 +1,22 @@
+<!-- pages/register/register.wxml -->
+<view class="wrap">
+  <view class="tabs">
+    <view class="tab {{tab === 'login' ? 'active' : ''}}" data-tab="login" bindtap="switchTab">登录</view>
+    <view class="tab {{tab === 'reg' ? 'active' : ''}}" data-tab="reg" bindtap="switchTab">注册</view>
+  </view>
+
+  <view class="card" wx:if="{{tab === 'login'}}">
+    <view class="field"><text class="lbl">手机号</text><input class="inp" data-f="lPhone" value="{{lPhone}}" bindinput="onInput" placeholder="白名单手机号" /></view>
+    <view class="field"><text class="lbl">密码</text><input class="inp" password data-f="lPwd" value="{{lPwd}}" bindinput="onInput" placeholder="密码" /></view>
+    <view class="btn" bindtap="doLogin">登录</view>
+    <view class="muted" style="margin-top:20rpx">没有账号？切到「注册」，仅白名单手机号可注册。</view>
+  </view>
+
+  <view class="card" wx:else>
+    <view class="field"><text class="lbl">姓名</text><input class="inp" data-f="rName" value="{{rName}}" bindinput="onInput" placeholder="你的称呼" /></view>
+    <view class="field"><text class="lbl">手机号（须为白名单）</text><input class="inp" data-f="rPhone" value="{{rPhone}}" bindinput="onInput" placeholder="如 13800000001" /></view>
+    <view class="field"><text class="lbl">密码</text><input class="inp" password data-f="rPwd" value="{{rPwd}}" bindinput="onInput" placeholder="设置密码" /></view>
+    <view class="btn" bindtap="doReg">注册并登录</view>
+    <view class="muted" style="margin-top:20rpx">演示白名单：13800000001 / 13800000002 / 13800000003</view>
+  </view>
+</view>

@@ -1,0 +1,30 @@
+<!-- pages/my/my.wxml -->
+<view class="card" wx:if="{{user}}">
+  <view class="profile">
+    <view>
+      <view class="pname">{{user.name}}</view>
+      <view class="muted">{{user.phone}}</view>
+    </view>
+    <text class="pill">已登录</text>
+  </view>
+  <view class="btn ghost" style="margin-top:20rpx" bindtap="logout">退出登录</view>
+</view>
+<view class="card" wx:else>
+  <view class="empty">未登录</view>
+  <view class="btn" bindtap="goRegister">去登录 / 注册</view>
+</view>
+
+<view class="hd">我的订单</view>
+<view class="card order" wx:for="{{orders}}" wx:key="id">
+  <view class="o-hd">
+    <text class="o-date">{{item.date}} {{item.slot}}</text>
+    <text class="tag {{item.status}}">{{item.statusText}}</text>
+  </view>
+  <view class="o-items">{{item.itemsText}}</view>
+  <view wx:if="{{item.note}}" class="muted">备注：{{item.note}}</view>
+  <view class="o-ft">
+    <text class="amt">¥{{item.totalPrice}}</text>
+    <text wx:if="{{item.status === 'pending'}}" class="btn sm ghost danger" data-id="{{item.id}}" bindtap="cancelOrder">取消订单</text>
+  </view>
+</view>
+<view wx:if="{{user && orders.length === 0}}" class="empty">还没有订单，去点餐吧 🍜</view>
