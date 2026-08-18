@@ -54,6 +54,26 @@ function jget(sql, params) { return db.prepare(sql).get(...(params || [])); }
 function jall(sql, params) { return db.prepare(sql).all(...(params || [])); }
 function jrun(sql, params) { return db.prepare(sql).run(...(params || [])); }
 
+// 解析批量白名单文本：每行一个，支持「手机号」「手机号,姓名」「姓名 手机号」（顺序不限，姓名可选）
+function parseWlText(text) {
+  const valid = [], invalid = [];
+  String(text || '').split(/\r?\n/).forEach(function (line) {
+    line = line.trim();
+    if (!line) return;
+    const parts = line.split(/[\s,，\t]+/).filter(Boolean);
+    if (!parts.length) return;
+    let phone = '', name = '';
+    parts.forEach(function (p) {
+      if (/^\d{6,15}$/.test(p) && !phone) phone = p;
+      else if (!/^\d{6,15}$/.test(p)) name += (name ? ' ' : '') + p;
+    });
+    if (!phone && /^\d{6,15}$/.test(parts[0] || '')) phone = parts[0];
+    if (phone) valid.push({ phone: phone, name: name });
+    else invalid.push(line);
+  });
+  return { valid: valid, invalid: invalid };
+}
+
 function getSetting(k, def) {
   const r = jget('SELECT value FROM settings WHERE key=?', [k]);
   return r ? r.value : def;
@@ -276,6 +296,25 @@ async function handleApi(req, res, pathname, query) {
       const id = uid('w');
       jrun('INSERT INTO whitelist(id,phone,name,used) VALUES(?,?,?,0)', [id, phone, String(b.name || '')]);
       return sendJSON(res, 200, { ok: true, entry: { id: id, phone: phone, name: b.name || '', used: 0 } });
+    }
+    // 白名单批量导入
+    if (method === 'POST' && pathname === '/api/admin/whitelist/batch') {
+      const b = await readBody(req);
+      const parsed = Array.isArray(b.entries)
+        ? { valid: b.entries.map(function (e) { return { phone: String(e && e.phone || '').trim(), name: String(e && e.name || '').trim() }; }), invalid: [] }
+        : parseWlText(b.text);
+      const list = parsed.valid || [];
+      const added = [], invalid = (parsed.invalid || []).slice(), skipped = [];
+      list.forEach(function (item) {
+        const phone = String(item.phone || '').trim();
+        const name = String(item.name || '').trim();
+        if (!/^\d{6,15}$/.test(phone)) { if (phone) invalid.push(phone); return; }
+        if (jget('SELECT COUNT(*) c FROM whitelist WHERE phone=?', [phone]).c) { skipped.push(phone); return; }
+        const id = uid('w');
+        jrun('INSERT INTO whitelist(id,phone,name,used) VALUES(?,?,?,0)', [id, phone, name]);
+        added.push({ id: id, phone: phone, name: name, used: 0 });
+      });
+      return sendJSON(res, 200, { ok: true, added: added.length, skipped: skipped.length, invalid: invalid.length, invalidList: invalid, entries: added });
     }
     let wm = pathname.match(/^\/api\/admin\/whitelist\/([^/]+)$/);
     if (wm && method === 'DELETE') {

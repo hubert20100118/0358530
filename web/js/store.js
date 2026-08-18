@@ -214,6 +214,32 @@
       return this.getWhitelist().filter(function (w) { return w.phone === phone; })[0] || null;
     },
 
+    batchWhitelist: function (text) {
+      if (remote === true) {
+        return apiReq('POST', '/admin/whitelist/batch', { text: String(text || '') }, true).then(function (r) {
+          return Store.refreshAdmin().then(function () { return r.j || { ok: false }; });
+        });
+      }
+      // local 模式：前端直接解析导入
+      var lines = String(text || '').split(/\r?\n/);
+      var added = 0, invalid = 0, skipped = 0;
+      lines.forEach(function (line) {
+        line = line.trim(); if (!line) return;
+        var parts = line.split(/[\s,，\t]+/).filter(Boolean);
+        var phone = '', name = '';
+        parts.forEach(function (p) {
+          if (/^\d{6,15}$/.test(p) && !phone) phone = p;
+          else if (!/^\d{6,15}$/.test(p)) name += (name ? ' ' : '') + p;
+        });
+        if (!phone && /^\d{6,15}$/.test(parts[0] || '')) phone = parts[0];
+        if (!phone) { invalid++; return; }
+        if (Store.findWhitelist(phone)) { skipped++; return; }
+        Store.addWhitelist({ phone: phone, name: name });
+        added++;
+      });
+      return Promise.resolve({ ok: true, added: added, skipped: skipped, invalid: invalid });
+    },
+
     getUsers: function () { return cache.users; },
     register: function (name, phone, password) {
       if (remote === true) {

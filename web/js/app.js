@@ -369,6 +369,24 @@
     };
     $('#wlCancel').onclick = function () { $('#editMask').classList.remove('show'); };
   }
+  function openWlBatch() {
+    $('#editBody').innerHTML = '<h3>批量导入白名单</h3>' +
+      '<p class="muted">每行一个：手机号，或「手机号,姓名」（姓名可选，手机号与姓名顺序不限）。</p>' +
+      '<div class="field"><textarea id="wlBatchText" rows="8" style="width:100%;font-family:monospace" placeholder="13800000004\n13800000005,李四\n王五 13800000006"></textarea></div>' +
+      '<button class="btn" id="wlBatchSave">导入</button><button class="btn ghost" id="wlBatchCancel" style="margin-top:10px">取消</button>';
+    $('#editMask').classList.add('show');
+    $('#wlBatchSave').onclick = function () {
+      var text = $('#wlBatchText').value;
+      if (!text.trim()) { toast('请粘贴手机号'); return; }
+      Store.batchWhitelist(text).then(function (r) {
+        $('#editMask').classList.remove('show');
+        renderWhitelist();
+        if (r && r.ok) toast('已导入 ' + (r.added || 0) + ' 条，跳过重复 ' + (r.skipped || 0) + ' 条，无效 ' + (r.invalid || 0) + ' 条');
+        else toast('导入完成');
+      });
+    };
+    $('#wlBatchCancel').onclick = function () { $('#editMask').classList.remove('show'); };
+  }
 
   // ---------- 导出 CSV ----------
   function exportCSV() {
@@ -448,6 +466,7 @@
     // 后台操作
     $('#addDishBtn').onclick = function () { openDishEdit(null); };
     $('#addWlBtn').onclick = openWlAdd;
+    $('#batchWlBtn').onclick = openWlBatch;
     $('#exportBtn').onclick = exportCSV;
 
     $('#dishManage').onclick = function (e) {
