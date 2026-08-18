@@ -24,9 +24,14 @@ meal-reservation/
    - **Build Command**：留空（无构建步骤）
    - **Start Command**：`npm start`（根目录 package.json 已声明，等价于 `node server/server.js`）
    - **Node Version**：22（根 package.json 的 `engines.node` 已声明，Render 会自动选用，无需手动选）
-4. 免费版的磁盘是**临时**的：每次部署/重启会重置 `data.db`（演示无所谓，长期使用会丢数据）。
-   若要持久，加一个 **Render Disk** 挂到 `/data`，并设置环境变量 `DB_PATH=/data/data.db`
-   （server.js 已支持该环境变量）。
+4. ⚠️ **【重要】数据持久化（否则改密/白名单会"丢失"）**
+   Render 免费版的磁盘是**临时**的：每次自动重部署 / 实例重启都会清空 `data.db`，
+   于是你刚改的后台密码会被重置回 `admin123`、你加的白名单会被抹掉——表现就是
+   「改完密码登不上」「别人注册被拒」。**这正是公网链接出问题的根因。**
+   解决：在 Render 后台给该服务加一个 **Disk**，挂载路径填 **`/data`**（容量 1GB 即可）。
+   - 本项目 `server.js` 已支持：检测到 `/data` 目录会自动把数据库落到 `/data/data.db`，
+     无需再手动设环境变量（当然也可显式设 `DB_PATH=/data/data.db` 覆盖）。
+   - 挂盘后重新部署，数据即跨重启/重部署保留；之后你改的密码、加的白名单都永久有效。
 5. 部署完成后得到 `https://xxx.onrender.com`，浏览器打开即是 remote 模式，
    后台密码 `admin123`（设置里可改）。把链接发给别人，他们用白名单手机号注册即可。
 

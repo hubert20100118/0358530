@@ -17,7 +17,16 @@ process.on('warning', function (w) { if (w && w.name === 'ExperimentalWarning') 
 
 const ROOT = path.resolve(__dirname, '..');
 const WEB_DIR = path.join(ROOT, 'web');
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data.db');
+// 数据库落盘路径：优先用环境变量 DB_PATH；否则若检测到持久盘挂载目录 /data（如 Render Disk）则自动用其，
+// 避免部署在临时文件系统（免费实例）时每次重启清空数据。本地开发回退到 server/data.db。
+function resolveDbPath() {
+  if (process.env.DB_PATH) return process.env.DB_PATH;
+  try {
+    if (fs.existsSync('/data') && fs.statSync('/data').isDirectory()) return path.join('/data', 'data.db');
+  } catch (e) { /* ignore */ }
+  return path.join(__dirname, 'data.db');
+}
+const DB_PATH = resolveDbPath();
 const PORT = process.env.PORT || 8137;
 
 const db = new DatabaseSync(DB_PATH);
