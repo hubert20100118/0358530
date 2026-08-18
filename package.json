@@ -7,6 +7,6 @@
     "start": "node --experimental-sqlite server/server.js"
   },
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   }
 }
