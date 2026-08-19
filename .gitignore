@@ -9,3 +9,11 @@ node_modules/
 
 # 本地环境
 .env
+
+# 内网穿透工具（自动下载，二进制不入库）
+cloudflared.exe
+tunnel-url.txt
+
+# 隧道 SSH 密钥（自动生成，含私钥，禁止提交）
+id_ed25519
+id_ed25519.pub

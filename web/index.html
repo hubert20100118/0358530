@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>阿布食堂 · 订餐小程序</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=20260819" />
 </head>
 <body>
   <!-- 顶部栏 -->
@@ -40,8 +40,10 @@
       <div class="field"><label>后台密码</label><input type="password" id="adminPwd" placeholder="默认 admin123" /></div>
       <button class="btn" id="adminLoginBtn">进入后台</button>
       <p class="muted" style="margin-top:10px">默认密码 admin123，可在「设置」中修改。</p>
+      <p class="muted" style="margin-top:8px;font-size:12px;line-height:1.6">后台看到的是<b>真实云端数据</b>。请用本机 <b>http://localhost:8137</b> 或手机访问的<b>公网隧道地址</b>打开本页；若进入后顶部显示「本地演示模式」，说明你打开的不是同一套系统（例如 CloudStudio 演示链接），请改用隧道/本机地址。</p>
     </div>
     <div id="adminPanel" style="display:none">
+      <div id="dataMode" class="mode-badge">加载中…</div>
       <div class="stat-grid" style="margin-bottom:12px">
         <div class="stat"><div class="num" id="stOrders">0</div><div class="lbl">总订单</div></div>
         <div class="stat"><div class="num" id="stRevenue">¥0</div><div class="lbl">总营收</div></div>
@@ -83,6 +85,7 @@
       <div class="card admin-only">
         <div class="row" style="align-items:center">
           <h3 style="margin:0;flex:1">🧾 全部订单</h3>
+          <button class="btn sm ghost" id="refreshBtn">刷新</button>
           <button class="btn sm ghost" id="exportBtn">导出CSV</button>
         </div>
         <div id="allOrders"></div>
@@ -158,7 +161,7 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="js/store.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/store.js?v=20260819"></script>
+  <script src="js/app.js?v=20260819"></script>
 </body>
 </html>

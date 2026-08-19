@@ -149,14 +149,18 @@
       return apiReq('GET', '/orders/mine').then(function (r) { if (r.j && r.j.orders) { cache.orders = r.j.orders; lsSet(KEYS.orders, cache.orders); } });
     },
     refreshAdmin: function () {
-      if (remote !== true || !adminToken()) return Promise.resolve();
-      return apiReq('GET', '/admin/state').then(function (r) {
+      // 不依赖 remote 标志：只要后台接口可达就拉取真实数据。
+      // 避免 Store.init() 探测 /api/settings 瞬时抖动降级成 local 后，remote 永久为 false，
+      // 导致后台（用户/订单/白名单）永远读不到云端数据、显示空白。
+      if (!adminToken()) return Promise.resolve();
+      return apiReq('GET', '/admin/state', null, true).then(function (r) {
         if (r.j && r.j.ok) {
+          remote = true; // 后台数据可达即视为云端模式
           cache.menu = r.j.menu || []; cache.settings = r.j.settings || null;
           cache.whitelist = r.j.whitelist || []; cache.users = r.j.users || []; cache.orders = r.j.orders || [];
           saveCache();
         }
-      });
+      }).catch(function () { /* 本地演示模式：拉不到后台数据，保持原样 */ });
     },
 
     getSettings: function () { return cache.settings || { shopName: '订餐小程序', slots: [], leadMinutes: 30 }; },
@@ -241,17 +245,41 @@
     },
 
     getUsers: function () { return cache.users; },
+    getUserById: function (id) { return this.getUsers().filter(function (u) { return u.id === id; })[0] || null; },
+    getUserOrders: function (userId) {
+      return this.getOrders().filter(function (o) { return o.userId === userId; });
+    },
+    setUserRole: function (id, role) {
+      if (remote === true) return apiReq('PUT', '/admin/users/' + encodeURIComponent(id) + '/role', { role: role }, true).then(function () { return Store.refreshAdmin(); });
+      var u = Store.getUserById(id); if (u) { u.role = role; lsSet(KEYS.users, cache.users); }
+      return Promise.resolve();
+    },
+    resetUserPassword: function (id, pwd) {
+      if (remote === true) return apiReq('POST', '/admin/users/' + encodeURIComponent(id) + '/reset', { password: pwd }, true);
+      return Promise.resolve();
+    },
+    deleteUser: function (id) {
+      if (remote === true) return apiReq('DELETE', '/admin/users/' + encodeURIComponent(id), null, true).then(function () { return Store.refreshAdmin(); });
+      cache.users = cache.users.filter(function (u) { return u.id !== id; }); lsSet(KEYS.users, cache.users);
+      return Promise.resolve();
+    },
     register: function (name, phone, password) {
-      if (remote === true) {
-        return apiReq('POST', '/register', { name: name, phone: phone, password: password }).then(function (r) {
-          if (r.j && r.j.ok) {
-            var sess = { id: r.j.user.id, name: r.j.user.name, phone: r.j.user.phone, role: r.j.user.role, token: r.j.token };
-            lsSet(KEYS.session, sess);
-            return { ok: true, user: sess };
-          }
+      // 优先走云端：即使 init 曾误判为 local，只要服务端可达就入库，保证后台可见
+      return apiReq('POST', '/register', { name: name, phone: phone, password: password }).then(function (r) {
+        if (r.ok && r.j && r.j.ok) {
+          remote = true;
+          var sess = { id: r.j.user.id, name: r.j.user.name, phone: r.j.user.phone, role: r.j.user.role, token: r.j.token };
+          lsSet(KEYS.session, sess);
+          return { ok: true, user: sess };
+        }
+        if (r.status === 401 || r.status === 403 || (r.j && r.j.msg)) {
+          // 云端明确拒绝（不在白名单 / 已注册 / 信息不全）：直接报错，不本地兜底
           return { ok: false, msg: (r.j && r.j.msg) || '注册失败' };
-        });
-      }
+        }
+        return localRegister(name, phone, password);
+      }).catch(function () { return localRegister(name, phone, password); });
+    },
+    localRegister: function (name, phone, password) {
       return new Promise(function (resolve) {
         var w = findWhitelistLocal(phone);
         if (!w) return resolve({ ok: false, msg: '该手机号不在可注册名单中，请联系管理员' });
@@ -267,16 +295,20 @@
       });
     },
     login: function (phone, password) {
-      if (remote === true) {
-        return apiReq('POST', '/login', { phone: phone, password: password }).then(function (r) {
-          if (r.j && r.j.ok) {
-            var sess = { id: r.j.user.id, name: r.j.user.name, phone: r.j.user.phone, role: r.j.user.role, token: r.j.token };
-            lsSet(KEYS.session, sess);
-            return { ok: true, user: sess };
-          }
+      return apiReq('POST', '/login', { phone: phone, password: password }).then(function (r) {
+        if (r.ok && r.j && r.j.ok) {
+          remote = true;
+          var sess = { id: r.j.user.id, name: r.j.user.name, phone: r.j.user.phone, role: r.j.user.role, token: r.j.token };
+          lsSet(KEYS.session, sess);
+          return { ok: true, user: sess };
+        }
+        if (r.status === 401 || r.status === 403 || (r.j && r.j.msg)) {
           return { ok: false, msg: (r.j && r.j.msg) || '登录失败' };
-        });
-      }
+        }
+        return localLogin(phone, password);
+      }).catch(function () { return localLogin(phone, password); });
+    },
+    localLogin: function (phone, password) {
       return new Promise(function (resolve) {
         var u = getUserLocal(phone);
         if (!u) return resolve({ ok: false, msg: '用户不存在' });
@@ -291,12 +323,14 @@
     logout: function () { try { localStorage.removeItem(KEYS.session); } catch (e) {} },
 
     adminLogin: function (password) {
-      if (remote === true) {
-        return apiReq('POST', '/admin/login', { password: password }).then(function (r) {
-          if (r.j && r.j.ok) { lsSet(KEYS.admin, { token: r.j.token }); return { ok: true }; }
-          return { ok: false, msg: (r.j && r.j.msg) || '密码错误' };
-        });
-      }
+      // 优先走云端：即使 init 误判 local，只要服务端可达就拿到真实 admin token，后台才能拉到数据
+      return apiReq('POST', '/admin/login', { password: password }).then(function (r) {
+        if (r.ok && r.j && r.j.ok) { lsSet(KEYS.admin, { token: r.j.token }); remote = true; return { ok: true }; }
+        if (r.status === 401 || (r.j && r.j.msg)) return { ok: false, msg: (r.j && r.j.msg) || '密码错误' };
+        return localAdminLogin(password);
+      }).catch(function () { return localAdminLogin(password); });
+    },
+    localAdminLogin: function (password) {
       return new Promise(function (resolve) {
         if (cache.settings && cache.settings.adminPassword === hash(password)) {
           lsSet(KEYS.admin, { token: 'admin_local' });
@@ -315,18 +349,26 @@
       o.createdAt = new Date().toISOString();
       o.status = 'pending';
       cache.orders.push(o); lsSet(KEYS.orders, cache.orders);
-      if (remote === true) apiReq('POST', '/orders', o).then(function (r) {
-        if (r.j && r.j.ok && r.j.order) {
+      // 始终尝试云端（local 模式 fetch 失败被忽略），服务端可达时订单入库、后台可见
+      apiReq('POST', '/orders', o).then(function (r) {
+        if (r.ok && r.j && r.j.ok && r.j.order) {
+          remote = true;
           var i = cache.orders.findIndex(function (x) { return x.id === o.id; });
           if (i >= 0) { cache.orders[i] = r.j.order; lsSet(KEYS.orders, cache.orders); }
         }
-      });
+      }).catch(function () {});
       return o;
     },
     updateOrderStatus: function (id, status) {
       cache.orders = cache.orders.map(function (o) { return o.id === id ? Object.assign({}, o, { status: status }) : o; });
       lsSet(KEYS.orders, cache.orders);
-      if (remote === true) apiReq('PUT', '/admin/orders/' + encodeURIComponent(id) + '/status', { status: status }, true);
+      apiReq('PUT', '/admin/orders/' + encodeURIComponent(id) + '/status', { status: status }, true).catch(function () {});
+    },
+    // 普通用户取消自己的订单：走 /api/orders/:id/cancel（仅需用户登录），避免误用需管理员权限的 admin 接口导致取消失败
+    cancelMyOrder: function (id) {
+      cache.orders = cache.orders.map(function (o) { return o.id === id ? Object.assign({}, o, { status: 'cancelled' }) : o; });
+      lsSet(KEYS.orders, cache.orders);
+      apiReq('PUT', '/orders/' + encodeURIComponent(id) + '/cancel', {}, false).then(function (r) { if (r.ok) remote = true; }).catch(function () {});
     },
     removeOrder: function (id) {
       cache.orders = cache.orders.filter(function (o) { return o.id !== id; });

@@ -145,3 +145,8 @@ body.is-admin .admin-only { display: block; }
 .danger { color: var(--red); }
 .pill { display:inline-block; font-size:11px; padding:1px 7px; border-radius:8px; background:#eef; color:#557; }
 .pill.used { background:#eee; color:#999; }
+/* 数据模式徽标（后台） */
+.mode-badge { font-size:12px; line-height:1.5; padding:8px 10px; border-radius:10px; margin-bottom:12px; }
+.mode-badge.ok { background:#e8f7ee; color:#14713f; border:1px solid #b6e3c8; }
+.mode-badge.warn { background:#fff4e5; color:#9a5b00; border:1px solid #ffd9a8; }
+.mode-badge b { color:inherit; }

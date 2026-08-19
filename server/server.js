@@ -169,7 +169,7 @@ function serveStatic(req, res, pathname) {
   fs.readFile(filePath, function (err, buf) {
     if (err) { res.writeHead(404); res.end('not found'); return; }
     const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
     res.end(buf);
   });
 }
@@ -227,6 +227,18 @@ async function handleApi(req, res, pathname, query) {
     const rows = jall('SELECT * FROM orders WHERE userId=? ORDER BY createdAt DESC', [userSess.userId]).map(viewOrder);
     return sendJSON(res, 200, { ok: true, orders: rows });
   }
+
+  // 取消自己的订单（仅需用户登录，只能取消本人订单）
+  let cm = pathname.match(/^\/api\/orders\/([^/]+)\/cancel$/);
+  if (cm && method === 'PUT') {
+    if (!userSess) return sendJSON(res, 401, { ok: false, msg: '请先登录' });
+    const o = jget('SELECT * FROM orders WHERE id=?', [cm[1]]);
+    if (!o) return sendJSON(res, 404, { ok: false, msg: '订单不存在' });
+    if (o.userId !== userSess.userId) return sendJSON(res, 403, { ok: false, msg: '只能取消自己的订单' });
+    jrun('UPDATE orders SET status=? WHERE id=? AND userId=?', ['cancelled', cm[1], userSess.userId]);
+    return sendJSON(res, 200, { ok: true });
+  }
+
   // 下单
   if (method === 'POST' && pathname === '/api/orders') {
     if (!userSess) return sendJSON(res, 401, { ok: false, msg: '请先登录' });
@@ -328,6 +340,39 @@ async function handleApi(req, res, pathname, query) {
     let wm = pathname.match(/^\/api\/admin\/whitelist\/([^/]+)$/);
     if (wm && method === 'DELETE') {
       jrun('DELETE FROM whitelist WHERE phone=?', [decodeURIComponent(wm[1])]);
+      return sendJSON(res, 200, { ok: true });
+    }
+    // 用户管理：某用户的全部订单
+    let uo = pathname.match(/^\/api\/admin\/users\/([^/]+)\/orders$/);
+    if (uo && method === 'GET') {
+      const rows = jall('SELECT * FROM orders WHERE userId=? ORDER BY createdAt DESC', [decodeURIComponent(uo[1])]).map(viewOrder);
+      return sendJSON(res, 200, { ok: true, orders: rows, count: rows.length });
+    }
+    // 用户管理：修改角色
+    let ur = pathname.match(/^\/api\/admin\/users\/([^/]+)\/role$/);
+    if (ur && method === 'PUT') {
+      const b = await readBody(req);
+      const role = b.role === 'admin' ? 'admin' : 'user';
+      jrun('UPDATE users SET role=? WHERE id=?', [role, decodeURIComponent(ur[1])]);
+      return sendJSON(res, 200, { ok: true });
+    }
+    // 用户管理：重置密码
+    let urp = pathname.match(/^\/api\/admin\/users\/([^/]+)\/reset$/);
+    if (urp && method === 'POST') {
+      const b = await readBody(req);
+      const pwd = String(b.password || '').trim();
+      if (!pwd) return sendJSON(res, 400, { ok: false, msg: '密码不能为空' });
+      jrun('UPDATE users SET password=? WHERE id=?', [sha(pwd), decodeURIComponent(urp[1])]);
+      return sendJSON(res, 200, { ok: true });
+    }
+    // 用户管理：删除用户（同时释放白名单、删除其订单）
+    let ud = pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+    if (ud && method === 'DELETE') {
+      const id = decodeURIComponent(ud[1]);
+      const u = jget('SELECT * FROM users WHERE id=?', [id]);
+      if (u) jrun('UPDATE whitelist SET used=0 WHERE phone=?', [u.phone]);
+      jrun('DELETE FROM orders WHERE userId=?', [id]);
+      jrun('DELETE FROM users WHERE id=?', [id]);
       return sendJSON(res, 200, { ok: true });
     }
     // 订单状态

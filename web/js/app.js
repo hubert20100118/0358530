@@ -114,7 +114,7 @@
     if (!Object.keys(cart).length) { toast('请先选择菜品'); return; }
     var s = Store.getSettings();
     selDate = todayStr(); selSlot = s.slots[0] || '';
-    var dates = futureDates(7);
+    var dates = futureDates(14);
     $('#orderDate').value = selDate;
     $('#orderDate').min = todayStr();
     $('#orderDate').max = dates[dates.length - 1].value;
@@ -214,6 +214,17 @@
     renderAdmin();
   }
   function renderAdmin() {
+    // 数据模式指示：让管理员一眼看出当前看的是「云端实时」还是「本地演示」
+    var dm = $('#dataMode');
+    if (dm) {
+      if (Store.isRemote()) {
+        dm.textContent = '🌐 云端实时数据 · 多人共享，用户下单后此处自动更新';
+        dm.className = 'mode-badge ok';
+      } else {
+        dm.textContent = '⚠️ 本地演示模式 · 数据仅存本机浏览器，与用户下单的系统不是同一份，请在手机访问的同一地址（公网隧道链接）打开后台';
+        dm.className = 'mode-badge warn';
+      }
+    }
     var st = Store.stats();
     $('#stOrders').textContent = st.totalOrders;
     $('#stRevenue').textContent = money(st.revenue);
@@ -262,9 +273,48 @@
   }
   function renderUsers() {
     var us = Store.getUsers();
+    var orders = Store.getOrders();
     $('#userList').innerHTML = us.map(function (u) {
-      return '<div class="list-item"><div><b>' + esc(u.name) + '</b> <span class="muted">' + esc(u.phone) + '</span></div><span class="pill">' + esc(u.role) + '</span></div>';
+      var cnt = orders.filter(function (o) { return o.userId === u.id; }).length;
+      return '<div class="list-item user-row" data-uid="' + u.id + '" style="cursor:pointer"><div style="flex:1"><b>' + esc(u.name) + '</b> <span class="muted">' + esc(u.phone) + '</span> <span class="pill">' + esc(u.role) + '</span></div><span class="muted">' + cnt + ' 单 ›</span></div>';
     }).join('') || '<div class="muted">暂无注册用户</div>';
+  }
+  function openUserDetail(id) {
+    var u = Store.getUserById(id);
+    if (!u) return;
+    var orders = Store.getUserOrders(id).slice().reverse();
+    var orderHtml = orders.length ? orders.map(function (o) {
+      var items = (o.items || []).map(function (i) { return esc(i.name) + 'x' + i.qty; }).join('、');
+      return '<div class="order"><div class="hd"><span class="date">' + esc(o.date) + ' ' + esc(o.slot) + '</span><span class="tag ' + o.status + '">' + statusText(o.status) + '</span></div><div class="items">' + items + '</div><div class="ft"><span class="amt">' + money(o.totalPrice) + '</span></div></div>';
+    }).join('') : '<div class="muted">该用户暂无订单</div>';
+    $('#editBody').innerHTML =
+      '<h3>用户详情</h3>' +
+      '<div class="row" style="align-items:center"><div style="flex:1"><div style="font-weight:700;font-size:17px">' + esc(u.name) + '</div><div class="muted">' + esc(u.phone) + ' · ' + esc(u.role) + '</div></div></div>' +
+      '<div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">' +
+        '<button class="btn sm" id="udRole">' + (u.role === 'admin' ? '设为普通用户' : '设为管理员') + '</button>' +
+        '<button class="btn sm ghost" id="udPwd">重置密码</button>' +
+        '<button class="btn sm ghost danger" id="udDel">删除用户</button>' +
+      '</div>' +
+      '<h3 style="margin-top:6px">该用户订单（' + orders.length + '）</h3>' +
+      '<div id="udOrders">' + orderHtml + '</div>' +
+      '<button class="btn ghost" id="udClose" style="margin-top:12px">关闭</button>';
+    $('#editMask').classList.add('show');
+    $('#udClose').onclick = function () { $('#editMask').classList.remove('show'); };
+    $('#udRole').onclick = function () {
+      var newRole = u.role === 'admin' ? 'user' : 'admin';
+      Store.setUserRole(u.id, newRole).then(function () { toast('已更新角色'); openUserDetail(u.id); renderUsers(); });
+    };
+    $('#udPwd').onclick = function () {
+      var np = prompt('输入新密码（将直接生效）', '123456');
+      if (!np) return;
+      Store.resetUserPassword(u.id, np).then(function (r) {
+        if (r && r.j && !r.j.ok) toast(r.j.msg || '重置失败'); else toast('密码已重置为：' + np);
+      });
+    };
+    $('#udDel').onclick = function () {
+      if (!confirm('删除用户 ' + u.name + '？将一并删除其全部订单，并释放该手机号可重新注册。')) return;
+      Store.deleteUser(u.id).then(function () { $('#editMask').classList.remove('show'); renderUsers(); toast('已删除'); });
+    };
   }
   function renderAllOrders() {
     var os = Store.getOrders().slice().reverse();
@@ -448,7 +498,7 @@
     // 我的订单取消
     $('#myOrders').onclick = function (e) {
       var b = e.target.closest('[data-cancel]'); if (!b) return;
-      Store.updateOrderStatus(b.dataset.cancel, 'cancelled'); renderMy(); toast('已取消');
+      Store.cancelMyOrder(b.dataset.cancel); renderMy(); toast('已取消');
     };
 
     // 后台登录
@@ -468,6 +518,13 @@
     $('#addWlBtn').onclick = openWlAdd;
     $('#batchWlBtn').onclick = openWlBatch;
     $('#exportBtn').onclick = exportCSV;
+    $('#refreshBtn').onclick = function () { if (!adminVerified) return; Store.refreshAdmin().then(function () { renderAdmin(); toast('已刷新'); }); };
+
+    // 用户列表：点击查看详情
+    $('#userList').onclick = function (e) {
+      var r = e.target.closest('[data-uid]'); if (!r) return;
+      openUserDetail(r.dataset.uid);
+    };
 
     $('#dishManage').onclick = function (e) {
       var ed = e.target.closest('[data-editd]'); var dl = e.target.closest('[data-deld]');
@@ -508,6 +565,13 @@
     $all('.modal-mask').forEach(function (m) {
       m.onclick = function (e) { if (e.target === m) m.classList.remove('show'); };
     });
+
+    // 后台自动刷新：每 15 秒拉取一次最新数据（仅在已登录且停留在后台页时）
+    setInterval(function () {
+      if (adminVerified && document.getElementById('view-admin').classList.contains('active')) {
+        Store.refreshAdmin().then(function () { if (adminVerified) renderAdmin(); });
+      }
+    }, 15000);
 
     // 预填设置
     var s = Store.getSettings();
